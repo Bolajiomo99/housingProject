@@ -19,7 +19,7 @@ import re
 import time 
 import csv
 import traceback
-from helpers.filewriters import write_to_json, write_to_csv
+# from helpers.filewriters import write_to_json, write_to_csv
 
 # fileToRead='./housing.pdf'
 
@@ -56,14 +56,15 @@ options = Options()
 
 driver = webdriver.Chrome('chromedriver', options=options)
 full_data = []
-data_dict = {}
+
 def get_data(html_data,child=False):
-    
+    data_dict = {}
     soup = BeautifulSoup(html_data, "lxml")
     child_scrape = False
     if soup.find('table', attrs={"id":"searchResults"}):
 
         number_results = len(soup.find_all('tr',attrs={'class':'SearchResults'}))
+        print('TTHIS IS RIGHT BEFORE NUMBER RESULTS OR IS NUMBER RESULTS')
         print(number_results)
         for i in range(3,number_results+3):
             result_button = driver.find_element_by_xpath(f'//*[@id="searchResults"]/tbody/tr[{i}]')
@@ -95,7 +96,7 @@ def get_data(html_data,child=False):
 
     try:
         parcel_info = soup.find('table', attrs={"id":"Parcel"}).find_all("tr")
-        data_dict['Parcel ID'] = code
+        
         for row in parcel_info:
             row_data =row.find_all('td')
             if len(row_data) == 2:
@@ -118,7 +119,7 @@ def get_data(html_data,child=False):
                     data_dict[key] = value
         
 
-        get_owner()
+        get_owner(data_dict)
 
 
         images_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[12]/a')
@@ -141,8 +142,9 @@ def get_data(html_data,child=False):
                             print(large_image_url)
 
                             image_url_list.append(large_image_url)
-                    except: 
-                        print('no image')
+                    except Exception as er: 
+                        traceback.print_tb(er.__traceback__)
+                        data_dict['Photo_Urls'] = image_url_list
 
                 data_dict['Photo_Urls'] = image_url_list
             except TimeoutException:
@@ -150,8 +152,8 @@ def get_data(html_data,child=False):
             if child:
                 driver.back()
         
+        print(json.dumps(data_dict, indent=4))
 
-        print(json.dumps(data_dict, indent=4))        
         full_data.append(data_dict)
         # print(json.dumps(data_dict, indent=4))
             
@@ -165,17 +167,16 @@ def get_data(html_data,child=False):
         print('damnit yeunjohn!')
 
 
-def get_owner():
+def get_owner(data_dict):
     
     owner_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[2]/a')
     owner_button.click()
     html_data = driver.page_source
-    time.sleep(2)
+    time.sleep(1)
     soup = BeautifulSoup(html_data, "lxml")
     owner_data = soup.find('table', id="Current Owner Details").find_all("tr")
     print('Each line in owner data')
     for row in owner_data:
-        time.sleep(0.1)
         owner_row_data = row.find_all('td')
         if len(owner_row_data) == 2:
             key = owner_row_data[0].find(text=True)
@@ -205,10 +206,26 @@ def search_Parcel(code):
 
 
 
+def write_to_json(full_data, loc):
+    with open(loc, 'w') as out:
+        out.write(json.dumps(full_data, indent=4))
+
+def write_to_csv(full_data,loc):
+    with open(loc, 'w') as csvfile:
+        csv_columns = list(full_data[0].keys())
+        writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+        writer.writeheader()
+        for parcel in full_data:
+            writer.writerow(parcel)
+
+
+
 
 for code in codes:
     try:
+        # data_dict['Parcel ID'] = code
         search_Parcel(code)
+        print('parcel code is: ',code)
     except Exception as error:
         traceback.print_tb(error.__traceback__)
         print('Second yeunjohn!')
