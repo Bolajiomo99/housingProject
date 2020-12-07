@@ -45,7 +45,6 @@ for line in lines_sanitized:
 
 driver = webdriver.Chrome('chromedriver')
 full_data= []
-
 def get_data(html_data):
     soup = BeautifulSoup(html_data, "lxml")
 
@@ -86,8 +85,8 @@ def get_data(html_data):
                     data_dict[key] = value
 
 
-        # get_Img('//*[@id="sidemenu"]/li[12]/a')
-        get_prices('//*[@id="sidemenu"]/li[8]/a')
+        get_Img('//*[@id="sidemenu"]/li[12]/a')
+        
 
 
         print(json.dumps(data_dict, indent=4))        
@@ -105,13 +104,8 @@ def get_data(html_data):
 def get_Img(img):
     photo_button = driver.find_element_by_xpath(img)
     photo_button.click()
-    time.sleep(2)
+    time.sleep(3)
 
-
-def get_prices(pricepath):
-    price_button = driver.find_element_by_xpath(pricepath)
-    price_button.click()
-    
     
 
 
