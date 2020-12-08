@@ -57,7 +57,7 @@ options = Options()
 driver = webdriver.Chrome('chromedriver', options=options)
 full_data = []
 
-def get_data(html_data,child=False):
+def get_data(code,html_data,child=False):
     data_dict = {}
     soup = BeautifulSoup(html_data, "lxml")
     child_scrape = False
@@ -95,6 +95,7 @@ def get_data(html_data,child=False):
        
 
     try:
+        data_dict['Parcel ID'] = code
         parcel_info = soup.find('table', attrs={"id":"Parcel"}).find_all("tr")
         
         for row in parcel_info:
@@ -118,9 +119,10 @@ def get_data(html_data,child=False):
                         value = re.sub(' +', ' ',value)
                     data_dict[key] = value
         
-
+        get_value(data_dict)
+        get_tax(data_dict)
         get_owner(data_dict)
-
+        
 
         images_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[12]/a')
         images_button.click()
@@ -157,34 +159,70 @@ def get_data(html_data,child=False):
         full_data.append(data_dict)
         # print(json.dumps(data_dict, indent=4))
             
-        parcel_owner_details = soup.find('table',attrs={"id":"Parcel Mailing Address"}).find_all("tr")
-        parcel_owner_alt_details = soup.find('table',attrs={"id":"Alternate Address"}).find_all("tr") 
-        parcel_owner_ACT_flags = soup.find('table',attrs={"id":"ACT Flags"}).find_all("tr") 
-        parcel_owner_tax_collector = soup.find('table',attrs={"id":"Tax Collector"}).find_all("tr") 
-        parcel_assessor = soup.find('table',attrs={"id":"Assessor"}).find_all("tr")
+        # parcel_owner_details = soup.find('table',attrs={"id":"Parcel Mailing Address"}).find_all("tr")
+        # parcel_owner_alt_details = soup.find('table',attrs={"id":"Alternate Address"}).find_all("tr") 
+        # parcel_owner_ACT_flags = soup.find('table',attrs={"id":"ACT Flags"}).find_all("tr") 
+        # parcel_owner_tax_collector = soup.find('table',attrs={"id":"Tax Collector"}).find_all("tr") 
+        # parcel_assessor = soup.find('table',attrs={"id":"Assessor"}).find_all("tr")
+
+
     except Exception as err:
         traceback.print_tb(err.__traceback__)
         print('damnit yeunjohn!')
 
+def get_tax(data_dict):
+
+    tax_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[11]/a')
+    tax_button.click()
+    html_data = driver.page_source
+    time.sleep(0.5)
+    soup = BeautifulSoup(html_data,"lxml")
+    tax_data =  soup.find('table', id="Estimated Tax Information").find_all("tr")
+    print('Tax Data RIGHT HERE!')
+    for row in tax_data:
+        tax_row_data = row.find_all('td')
+        if len(tax_row_data) ==2:
+            key = tax_row_data[0].find(text=True)
+            value = tax_row_data[1].find(text=True)
+            data_dict[key]=value
+
 
 def get_owner(data_dict):
-    
     owner_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[2]/a')
     owner_button.click()
     html_data = driver.page_source
-    time.sleep(1)
+    # time.sleep(1)
     soup = BeautifulSoup(html_data, "lxml")
     owner_data = soup.find('table', id="Current Owner Details").find_all("tr")
-    print('Each line in owner data')
+    # print('Each line in owner data')
     for row in owner_data:
         owner_row_data = row.find_all('td')
         if len(owner_row_data) == 2:
             key = owner_row_data[0].find(text=True)
             value = owner_row_data[1].find(text=True)
+            if key == '':
+                continue
+            if key=='Name(s)':
+                key='Owner Name'
             data_dict[key] = value
-            print(key,value,sep=' | ')
+            
 
 
+def get_value(data_dict):
+    value_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[8]/a')
+    value_button.click()
+    html_data = driver.page_source
+    # time.sleep(1)
+    soup = BeautifulSoup(html_data, "lxml")
+    value_data = soup.find('table', id="Values").find_all('tr')
+    print('EACH LINE IN VALUE')
+    for row in value_data:
+        value_row_data = row.find_all('td')
+        if len(value_row_data) ==2:
+            key = value_row_data[0].find(text=True)
+            value = value_row_data[1].find(text=True)
+            data_dict[key] = value
+            # print(key,value, sep= ' | ')
 
 def search_Parcel(code):
     parcel_url = 'https://www.ncpub.org/_web/Search/Disclaimer.aspx?FromUrl=../search/commonsearch.aspx?mode=parid'
@@ -202,7 +240,7 @@ def search_Parcel(code):
     html_data = driver.page_source
 
     
-    get_data(html_data)
+    get_data(code,html_data)
 
 
 
@@ -223,7 +261,6 @@ def write_to_csv(full_data,loc):
 
 for code in codes:
     try:
-        # data_dict['Parcel ID'] = code
         search_Parcel(code)
         print('parcel code is: ',code)
     except Exception as error:
