@@ -119,9 +119,12 @@ def get_data(code,html_data,child=False):
                         value = re.sub(' +', ' ',value)
                     data_dict[key] = value
         
+        get_land_size(data_dict)
         get_value(data_dict)
         get_tax(data_dict)
         get_owner(data_dict)
+        get_sale_info(data_dict)
+        
         
 
         images_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[12]/a')
@@ -170,15 +173,35 @@ def get_data(code,html_data,child=False):
         traceback.print_tb(err.__traceback__)
         print('damnit yeunjohn!')
 
+
+
+def get_land_size(data_dict):
+    
+    land_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[7]/a')
+    land_button.click()
+    html_data = driver.page_source
+    time.sleep(0.5)
+    soup = BeautifulSoup(html_data,"lxml")
+    land_data = soup.find('table', id="Land Details").find_all("tr")
+    #print('LAND SIZE DATA')
+    for row in land_data:
+        land_row_data = row.find_all('td')
+        if len(land_row_data)==2:
+            key = land_row_data[0].find(text=True)
+            value = land_row_data[1].find(text=True)
+            #print(key,value,sep=" | ")
+            data_dict[key] = value
+    
+
+
 def get_tax(data_dict):
 
     tax_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[11]/a')
     tax_button.click()
     html_data = driver.page_source
-    time.sleep(0.5)
     soup = BeautifulSoup(html_data,"lxml")
     tax_data =  soup.find('table', id="Estimated Tax Information").find_all("tr")
-    print('Tax Data RIGHT HERE!')
+    #print('Tax Data RIGHT HERE!')
     for row in tax_data:
         tax_row_data = row.find_all('td')
         if len(tax_row_data) ==2:
@@ -205,8 +228,28 @@ def get_owner(data_dict):
             if key=='Name(s)':
                 key='Owner Name'
             data_dict[key] = value
+            if key=='Mailing Address':
+                if data_dict[key] == data_dict['Property Location']:
+                        data_dict['Property Location same as Mailing'] = 'Yes'
+                else:
+                    data_dict['Property Location same as Mailing'] = 'No'
             
 
+def get_sale_info(data_dict):
+    sale_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[10]/a')
+    sale_button.click()
+    html_data = driver.page_source
+    soup = BeautifulSoup(html_data, "lxml")
+    sale_data = soup.find('table', id="Sales Detail").find_all('tr')
+    print('------------------EACH LINE IN SALES------------')
+    for row in sale_data:
+        sale_row_data = row.find_all('td')
+        #print(sale_row_data)
+        if len(sale_row_data) == 2:
+            key = sale_row_data[0].find(text=True)
+            value = sale_row_data[1].find(text=True)
+            data_dict[key] = value
+            print(key,value,sep=" | ")
 
 def get_value(data_dict):
     value_button = driver.find_element_by_xpath('//*[@id="sidemenu"]/li[8]/a')
@@ -215,7 +258,7 @@ def get_value(data_dict):
     # time.sleep(1)
     soup = BeautifulSoup(html_data, "lxml")
     value_data = soup.find('table', id="Values").find_all('tr')
-    print('EACH LINE IN VALUE')
+    
     for row in value_data:
         value_row_data = row.find_all('td')
         if len(value_row_data) ==2:
